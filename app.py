@@ -6,8 +6,6 @@ import pandas as pd
 from datetime import datetime
 import json
 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-
 # Configuration de la page (doit être la première commande Streamlit)
 st.set_page_config(
     page_title="Lexaflow - Générateur de Descriptions Produits",
@@ -15,11 +13,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# Chargement des variables d'environnement
-load_dotenv()
+# Vérification de l'authentification
+if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+    st.warning("Veuillez vous connecter pour accéder à l'application.")
+    st.switch_page("pages/login.py")
 
-# Configuration de la clé API OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Configuration de la clé API OpenAI (gestion local/production)
+try:
+    # Essayer d'abord les secrets Streamlit (production)
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+except:
+    # Si échec, utiliser le fichier .env (développement local)
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Ajout du JavaScript personnalisé pour la copie
 st.markdown("""
@@ -33,6 +39,18 @@ st.markdown("""
     }
     </script>
 """, unsafe_allow_html=True)
+
+# Titre et description
+st.title("✨ Lexaflow")
+st.markdown("""
+    ### Générateur intelligent de descriptions produits
+    Créez des descriptions de produits optimisées SEO en quelques clics.
+""")
+
+# Bouton de déconnexion
+if st.button("Se déconnecter"):
+    st.session_state.authenticated = False
+    st.switch_page("pages/login.py")
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:
@@ -108,13 +126,6 @@ Format de sortie souhaité :
     except Exception as e:
         st.error(f"Une erreur est survenue lors de la génération : {str(e)}")
         return None
-
-# Titre et description
-st.title("✨ Lexaflow")
-st.markdown("""
-    ### Générateur intelligent de descriptions produits
-    Créez des descriptions de produits optimisées SEO en quelques clics.
-""")
 
 # Formulaire principal
 with st.form("product_description_form"):
