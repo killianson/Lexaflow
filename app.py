@@ -20,7 +20,7 @@ if 'current_page' not in st.session_state:
 # Vérification de l'authentification
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     st.session_state.current_page = 'login'
-    st.experimental_rerun()
+    st.rerun()
 
 # Si on est sur la page de login, on ne continue pas
 if st.session_state.current_page == 'login':
@@ -59,7 +59,7 @@ st.markdown("""
 if st.button("Se déconnecter"):
     st.session_state.authenticated = False
     st.session_state.current_page = 'login'
-    st.experimental_rerun()
+    st.rerun()
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:

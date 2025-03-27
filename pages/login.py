@@ -52,7 +52,7 @@ with st.form("login_form"):
             st.session_state.authenticated = True
             st.session_state.username = username
             st.session_state.current_page = 'main'
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Nom d'utilisateur ou mot de passe incorrect")
 
@@ -61,4 +61,4 @@ st.markdown("---")
 st.markdown("Vous n'avez pas encore de compte ?")
 if st.button("Créer un nouveau compte"):
     st.session_state.current_page = 'register'
-    st.experimental_rerun() 
+    st.rerun() 
