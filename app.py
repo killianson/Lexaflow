@@ -16,7 +16,7 @@ st.set_page_config(
 # Vérification de l'authentification
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     st.warning("Veuillez vous connecter pour accéder à l'application.")
-    st.switch_page("pages/login.py")
+    st.switch_page("./pages/login.py")
 
 # Configuration de la clé API OpenAI (gestion local/production)
 try:
@@ -50,7 +50,7 @@ st.markdown("""
 # Bouton de déconnexion
 if st.button("Se déconnecter"):
     st.session_state.authenticated = False
-    st.switch_page("pages/login.py")
+    st.switch_page("./pages/login.py")
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:
