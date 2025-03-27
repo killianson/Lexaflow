@@ -39,7 +39,7 @@ st.markdown("""
 
 # Formulaire d'inscription
 with st.form("register_form"):
-    new_username = st.text_input("Choisissez un nom d'utilisateur")
+    new_email = st.text_input("Adresse email")
     new_password = st.text_input("Choisissez un mot de passe", type="password")
     confirm_password = st.text_input("Confirmez le mot de passe", type="password")
     submitted = st.form_submit_button("Créer le compte")
@@ -49,10 +49,10 @@ with st.form("register_form"):
             st.error("Les mots de passe ne correspondent pas")
         else:
             users = load_users()
-            if new_username in users:
-                st.error("Ce nom d'utilisateur existe déjà")
+            if new_email in users:
+                st.error("Cette adresse email est déjà utilisée")
             else:
-                users[new_username] = {
+                users[new_email] = {
                     'password': hash_password(new_password),
                     'created_at': str(datetime.now())
                 }

@@ -43,18 +43,18 @@ if 'authenticated' not in st.session_state:
 
 # Formulaire de connexion
 with st.form("login_form"):
-    username = st.text_input("Nom d'utilisateur")
+    email = st.text_input("Adresse email")
     password = st.text_input("Mot de passe", type="password")
     submitted = st.form_submit_button("Se connecter")
     
     if submitted:
         users = load_users()
-        if username in users and users[username]['password'] == hash_password(password):
+        if email in users and users[email]['password'] == hash_password(password):
             st.session_state.authenticated = True
-            st.session_state.username = username
+            st.session_state.email = email
             st.switch_page("app.py")
         else:
-            st.error("Nom d'utilisateur ou mot de passe incorrect")
+            st.error("Email ou mot de passe incorrect")
 
 # Option pour créer un nouveau compte
 st.markdown("---")
