@@ -183,12 +183,10 @@ if 'show_feedback' in st.session_state and st.session_state['show_feedback']:
             horizontal=True
         )
         
-        feedback_text = ""
-        if satisfaction == "👎 Non":
-            feedback_text = st.text_area(
-                "Pourquoi ?",
-                placeholder="Dites-nous ce qui ne vous convient pas pour que nous puissions nous améliorer."
-            )
+        feedback_text = st.text_area(
+            "Votre commentaire (optionnel)",
+            placeholder="Dites-nous ce que vous pensez de cette description, ce qui vous a plu ou ce qui pourrait être amélioré."
+        )
         
         feedback_submitted = st.form_submit_button("Envoyer le retour")
         
