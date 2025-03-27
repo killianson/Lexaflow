@@ -6,6 +6,8 @@ import pandas as pd
 from datetime import datetime
 import json
 
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
 # Configuration de la page (doit être la première commande Streamlit)
 st.set_page_config(
     page_title="Lexaflow - Générateur de Descriptions Produits",
