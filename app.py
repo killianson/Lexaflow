@@ -10,21 +10,14 @@ import json
 st.set_page_config(
     page_title="Lexaflow - Générateur de Descriptions Produits",
     page_icon="✨",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
-
-# Initialisation de la session state pour la navigation
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 'main'
 
 # Vérification de l'authentification
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.session_state.current_page = 'login'
-    st.rerun()
-
-# Si on est sur la page de login, on ne continue pas
-if st.session_state.current_page == 'login':
-    st.stop()
+    st.warning("Veuillez vous connecter pour accéder à l'application.")
+    st.switch_page("pages/login.py")
 
 # Configuration de la clé API OpenAI (gestion local/production)
 try:
@@ -58,8 +51,7 @@ st.markdown("""
 # Bouton de déconnexion
 if st.button("Se déconnecter"):
     st.session_state.authenticated = False
-    st.session_state.current_page = 'login'
-    st.rerun()
+    st.switch_page("pages/login.py")
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:

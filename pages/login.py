@@ -26,7 +26,8 @@ def save_users(users):
 st.set_page_config(
     page_title="Connexion - Lexaflow",
     page_icon="🔐",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # Titre et description
@@ -51,8 +52,7 @@ with st.form("login_form"):
         if username in users and users[username]['password'] == hash_password(password):
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.session_state.current_page = 'main'
-            st.rerun()
+            st.switch_page("app.py")
         else:
             st.error("Nom d'utilisateur ou mot de passe incorrect")
 
@@ -60,5 +60,4 @@ with st.form("login_form"):
 st.markdown("---")
 st.markdown("Vous n'avez pas encore de compte ?")
 if st.button("Créer un nouveau compte"):
-    st.session_state.current_page = 'register'
-    st.rerun() 
+    st.switch_page("pages/register.py") 

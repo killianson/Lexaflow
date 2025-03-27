@@ -26,7 +26,8 @@ def save_users(users):
 st.set_page_config(
     page_title="Inscription - Lexaflow",
     page_icon="📝",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # Titre et description
@@ -57,12 +58,10 @@ with st.form("register_form"):
                 }
                 save_users(users)
                 st.success("Compte créé avec succès!")
-                st.session_state.current_page = 'login'
-                st.rerun()
+                st.switch_page("pages/login.py")
 
 # Option pour retourner à la connexion
 st.markdown("---")
 st.markdown("Déjà un compte ?")
 if st.button("Retour à la connexion"):
-    st.session_state.current_page = 'login'
-    st.rerun() 
+    st.switch_page("pages/login.py") 
