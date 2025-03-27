@@ -13,10 +13,18 @@ st.set_page_config(
     layout="wide"
 )
 
+# Initialisation de la session state pour la navigation
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'main'
+
 # Vérification de l'authentification
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.warning("Veuillez vous connecter pour accéder à l'application.")
-    st.switch_page("pages/login.py")
+    st.session_state.current_page = 'login'
+    st.experimental_rerun()
+
+# Si on est sur la page de login, on ne continue pas
+if st.session_state.current_page == 'login':
+    st.stop()
 
 # Configuration de la clé API OpenAI (gestion local/production)
 try:
@@ -50,7 +58,8 @@ st.markdown("""
 # Bouton de déconnexion
 if st.button("Se déconnecter"):
     st.session_state.authenticated = False
-    st.switch_page("pages/login.py")
+    st.session_state.current_page = 'login'
+    st.experimental_rerun()
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:

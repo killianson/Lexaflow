@@ -57,10 +57,12 @@ with st.form("register_form"):
                 }
                 save_users(users)
                 st.success("Compte créé avec succès!")
-                st.switch_page("pages/login.py")
+                st.session_state.current_page = 'login'
+                st.experimental_rerun()
 
 # Option pour retourner à la connexion
 st.markdown("---")
 st.markdown("Déjà un compte ?")
 if st.button("Retour à la connexion"):
-    st.switch_page("pages/login.py") 
+    st.session_state.current_page = 'login'
+    st.experimental_rerun() 
