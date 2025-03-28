@@ -8,6 +8,8 @@ import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+daily_limit = 10
+
 # Configuration de la page (doit être la première commande Streamlit)
 st.set_page_config(
     page_title="Lexaflow - Générateur de Descriptions Produits",
@@ -15,6 +17,47 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+def check_daily_limit(email):
+    try:
+        # Créer le dossier data s'il n'existe pas
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        
+        # Chemin du fichier de compteur
+        counter_file = 'data/daily_counter.json'
+        
+        # Charger ou initialiser le compteur
+        if os.path.exists(counter_file):
+            with open(counter_file, 'r') as f:
+                counters = json.load(f)
+        else:
+            counters = {}
+        
+        # Vérifier si l'utilisateur a un compteur pour aujourd'hui
+        today = datetime.now().strftime('%Y-%m-%d')
+        if email not in counters:
+            counters[email] = {'date': today, 'count': 0}
+        
+        # Réinitialiser le compteur si c'est un nouveau jour
+        if counters[email]['date'] != today:
+            counters[email] = {'date': today, 'count': 0}
+        
+        # Vérifier la limite
+        if counters[email]['count'] >= daily_limit:
+            return False
+        
+        # Incrémenter le compteur
+        counters[email]['count'] += 1
+        
+        # Sauvegarder le compteur
+        with open(counter_file, 'w') as f:
+            json.dump(counters, f)
+        
+        return True
+    except Exception as e:
+        st.error(f"Erreur lors de la vérification de la limite : {str(e)}")
+        return False
 
 # Vérification de l'authentification
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
@@ -163,22 +206,26 @@ if submitted:
     if not product_name:
         st.error("Veuillez entrer le nom du produit.")
     else:
-        with st.spinner("Génération de la description en cours..."):
-            description = generate_product_description(
-                product_name,
-                product_category,
-                target_audience,
-                brand_tone,
-                key_features,
-                keywords
-            )
-            
-            if description:
-                st.success("Description générée avec succès!")
-                # Stockage de la description dans la session state
-                st.session_state['current_description'] = description
-                st.session_state['current_product_name'] = product_name
-                st.session_state['show_feedback'] = True
+        # Vérifier la limite quotidienne
+        if not check_daily_limit(st.session_state.email):
+            st.error(f"Vous avez atteint la limite de {daily_limit} générations par jour. Revenez demain pour continuer.")
+        else:
+            with st.spinner("Génération de la description en cours..."):
+                description = generate_product_description(
+                    product_name,
+                    product_category,
+                    target_audience,
+                    brand_tone,
+                    key_features,
+                    keywords
+                )
+                
+                if description:
+                    st.success("Description générée avec succès!")
+                    # Stockage de la description dans la session state
+                    st.session_state['current_description'] = description
+                    st.session_state['current_product_name'] = product_name
+                    st.session_state['show_feedback'] = True
 
 # Affichage de la description actuelle si elle existe
 if 'current_description' in st.session_state:
