@@ -104,6 +104,7 @@ La description doit :
 4. Adapter le ton au public cible
 5. Être optimisée pour le référencement naturel
 6. Être structurée avec des paragraphes courts et des puces pour les caractéristiques clés
+7. Contenir uniquement le titre avec sa description, sans aucun autre texte ni de mots en gras.
 
 Format de sortie souhaité :
 - Un titre accrocheur
@@ -112,8 +113,8 @@ Format de sortie souhaité :
 - Un appel à l'action final"""
 
     try:
-        # Appel à l'API OpenAI avec l'ancienne syntaxe
-        response = openai.ChatCompletion.create(
+        # Appel à l'API OpenAI avec la nouvelle syntaxe
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Vous êtes un expert en rédaction e-commerce spécialisé dans la création de descriptions de produits optimisées SEO."},
