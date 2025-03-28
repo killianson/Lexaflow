@@ -5,6 +5,8 @@ import os
 import pandas as pd
 from datetime import datetime
 import json
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Configuration de la page (doit être la première commande Streamlit)
 st.set_page_config(
@@ -55,30 +57,25 @@ if st.button("Se déconnecter"):
 
 def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:
-        # Création du dossier data s'il n'existe pas
-        if not os.path.exists('data'):
-            os.makedirs('data')
-            st.write("Dossier data créé")
+        # Configuration de l'accès à Google Sheets
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds = ServiceAccountCredentials.from_json_keyfile_name('google_creds.json', scope)
+        client = gspread.authorize(creds)
+        sheet = client.open('Lexaflow Feedback').sheet1
         
-        # Création du fichier CSV s'il n'existe pas
-        csv_file = 'data/feedback.csv'
-        if not os.path.exists(csv_file):
-            df = pd.DataFrame(columns=['timestamp', 'product_name', 'description', 'is_satisfied', 'feedback_text'])
-            df.to_csv(csv_file, index=False)
-            st.write("Fichier CSV créé")
+        # Préparer la nouvelle ligne de feedback
+        new_row = [
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            product_name,
+            description,
+            str(is_satisfied),
+            feedback_text
+        ]
         
-        # Ajout du nouveau feedback
-        new_feedback = pd.DataFrame({
-            'timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
-            'product_name': [product_name],
-            'description': [description],
-            'is_satisfied': [is_satisfied],
-            'feedback_text': [feedback_text]
-        })
-        
-        new_feedback.to_csv(csv_file, mode='a', header=False, index=False)
-        st.write("Feedback enregistré avec succès")
+        # Ajouter le feedback
+        sheet.append_row(new_row)
         return True
+        
     except Exception as e:
         st.error(f"Erreur lors de l'enregistrement du feedback : {str(e)}")
         return False

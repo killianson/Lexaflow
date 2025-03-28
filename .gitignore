@@ -40,3 +40,7 @@ Thumbs.db
 
 # Logs
 *.log 
+
+google_creds.json
+
+__pycache__/
