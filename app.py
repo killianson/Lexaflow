@@ -59,7 +59,8 @@ def log_feedback(product_name, description, is_satisfied, feedback_text):
     try:
         # Configuration de l'accès à Google Sheets
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_name('google_creds.json', scope)
+        creds_dict = json.loads(st.secrets["GCP_CREDENTIALS"])
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         sheet = client.open('Lexaflow Feedback').sheet1
         
