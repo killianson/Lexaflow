@@ -115,7 +115,7 @@ Format de sortie souhaité :
     try:
         # Appel à l'API OpenAI avec la nouvelle syntaxe
         response = openai.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Vous êtes un expert en rédaction e-commerce spécialisé dans la création de descriptions de produits optimisées SEO."},
                 {"role": "user", "content": prompt}
