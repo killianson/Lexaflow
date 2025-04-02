@@ -1,263 +1,111 @@
 import streamlit as st
-import openai
-from dotenv import load_dotenv
 import os
-import pandas as pd
+import csv
+from dotenv import load_dotenv
 from datetime import datetime
-import json
+from openai import OpenAI
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-daily_limit = 10
 
-# Configuration de la page (doit être la première commande Streamlit)
-st.set_page_config(
-    page_title="Lexaflow - Générateur de Descriptions Produits",
-    page_icon="✨",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-def check_daily_limit(email):
+def log_feedback_to_gsheet(topic, keywords, tone, is_satisfied, feedback_text):
     try:
-        # Créer le dossier data s'il n'existe pas
-        if not os.path.exists('data'):
-            os.makedirs('data')
-        
-        # Chemin du fichier de compteur
-        counter_file = 'data/daily_counter.json'
-        
-        # Charger ou initialiser le compteur
-        if os.path.exists(counter_file):
-            with open(counter_file, 'r') as f:
-                counters = json.load(f)
-        else:
-            counters = {}
-        
-        # Vérifier si l'utilisateur a un compteur pour aujourd'hui
-        today = datetime.now().strftime('%Y-%m-%d')
-        if email not in counters:
-            counters[email] = {'date': today, 'count': 0}
-        
-        # Réinitialiser le compteur si c'est un nouveau jour
-        if counters[email]['date'] != today:
-            counters[email] = {'date': today, 'count': 0}
-        
-        # Vérifier la limite
-        if counters[email]['count'] >= daily_limit:
-            return False
-        
-        # Incrémenter le compteur
-        counters[email]['count'] += 1
-        
-        # Sauvegarder le compteur
-        with open(counter_file, 'w') as f:
-            json.dump(counters, f)
-        
-        return True
-    except Exception as e:
-        st.error(f"Erreur lors de la vérification de la limite : {str(e)}")
-        return False
-
-# Vérification de l'authentification
-if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.warning("Veuillez vous connecter pour accéder à l'application.")
-    st.switch_page("pages/login.py")
-
-# Configuration de la clé API OpenAI (gestion local/production)
-try:
-    # Essayer d'abord les secrets Streamlit (production)
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-except:
-    # Si échec, utiliser le fichier .env (développement local)
-    load_dotenv()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# Ajout du JavaScript personnalisé pour la copie
-st.markdown("""
-    <script>
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(function() {
-            console.log('Texte copié avec succès');
-        }).catch(function(err) {
-            console.error('Erreur lors de la copie: ', err);
-        });
-    }
-    </script>
-""", unsafe_allow_html=True)
-
-# Titre et description
-st.title("✨ Lexaflow")
-st.markdown("""
-    ### Générateur intelligent de descriptions produits
-    Créez des descriptions de produits optimisées SEO en quelques clics.
-""")
-
-# Bouton de déconnexion
-if st.button("Se déconnecter"):
-    st.session_state.authenticated = False
-    st.switch_page("pages/login.py")
-
-def log_feedback(product_name, description, is_satisfied, feedback_text):
-    try:
-        # Configuration de l'accès à Google Sheets
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds_dict = json.loads(st.secrets["GCP_CREDENTIALS"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        client = gspread.authorize(creds)
-        sheet = client.open('Lexaflow Feedback').sheet1
-        
-        # Préparer la nouvelle ligne de feedback
-        new_row = [
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            product_name,
-            description,
-            str(is_satisfied),
-            feedback_text
+        # Définir les autorisations nécessaires
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
         ]
-        
-        # Ajouter le feedback
-        sheet.append_row(new_row)
+        creds = ServiceAccountCredentials.from_json_keyfile_name("google_creds.json", scope)
+        client = gspread.authorize(creds)
+
+        # Ouvrir ou créer la feuille de calcul
+        try:
+            sheet = client.open("Lexaflow Feedback").sheet1
+        except:
+            sheet = client.create("Lexaflow Feedback").sheet1
+            sheet.append_row(["Timestamp", "Sujet", "Mots-clés", "Ton", "Satisfait", "Feedback"])
+
+        # Ajouter une nouvelle ligne
+        row = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), topic, keywords, tone, is_satisfied, feedback_text]
+        sheet.append_row(row)
+
         return True
-        
     except Exception as e:
-        st.error(f"Erreur lors de l'enregistrement du feedback : {str(e)}")
+        st.error(f"Erreur lors de l’enregistrement du feedback : {e}")
         return False
-
-def generate_product_description(product_name, category, audience, tone, features, keywords):
-    # Construction du prompt
-    prompt = f"""En tant qu'expert en rédaction e-commerce, créez une description de produit optimisée SEO pour le produit suivant :
-
-Nom du produit : {product_name}
-Catégorie : {category}
-Public cible : {', '.join(audience)}
-Ton souhaité : {tone}
-
-Caractéristiques principales :
-{features}
-
-Mots-clés SEO à intégrer : {keywords}
-
-La description doit :
-1. Être engageante et persuasive
-2. Intégrer naturellement les mots-clés SEO
-3. Mettre en avant les caractéristiques principales
-4. Adapter le ton au public cible
-5. Être optimisée pour le référencement naturel
-6. Être structurée avec des paragraphes courts et des puces pour les caractéristiques clés
-7. Contenir uniquement le titre avec sa description, sans aucun autre texte ni de mots en gras.
-
-Format de sortie souhaité :
-- Un titre accrocheur
-- Une description principale en 2-3 paragraphes
-- Une liste de caractéristiques clés en puces
-- Un appel à l'action final"""
-
-    try:
-        # Appel à l'API OpenAI avec la nouvelle syntaxe
-        response = openai.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Vous êtes un expert en rédaction e-commerce spécialisé dans la création de descriptions de produits optimisées SEO."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"Une erreur est survenue lors de la génération : {str(e)}")
-        return None
-
-# Formulaire principal
-with st.form("product_description_form"):
-    col1, col2 = st.columns(2)
     
-    with col1:
-        product_name = st.text_input("Nom du produit")
-        product_category = st.selectbox(
-            "Catégorie du produit",
-            ["Mode", "Décoration", "High-tech", "Alimentation", "Autre"]
-        )
-        target_audience = st.multiselect(
-            "Public cible",
-            ["Particuliers", "Professionnels", "Enfants", "Adolescents", "Seniors"]
-        )
+
+
+
+# Chargement de la clé API depuis le .env
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialisation du compteur de génération
+if "counter" not in st.session_state:
+    st.session_state.counter = 0
+
+# Titres
+st.set_page_config(page_title="Lexaflow - Générateur SEO IA", layout="centered")
+st.title("🧠 Générateur d’articles de blog SEO avec l’IA")
+st.markdown("Entrez les informations ci-dessous pour générer un article optimisé automatiquement.")
+
+# Formulaire utilisateur
+with st.form("article_form"):
+    topic = st.text_input("📝 Sujet de l’article", placeholder="Ex : Comment choisir une lampe design ?")
+    keywords = st.text_input("🔍 Mots-clés SEO (séparés par des virgules)", placeholder="lampe moderne, ambiance lumineuse")
+    tone = st.selectbox("🎙 Ton souhaité", ["Professionnel", "Amical", "Informatif", "Inspirationnel"])
+    notes = st.text_area("🧾 Quelque chose à préciser sur votre activité ?", placeholder="Ex : Nous sommes un magasin de déco basé à Marseille.")
     
-    with col2:
-        brand_tone = st.selectbox(
-            "Ton de marque",
-            ["Professionnel", "Décontracté", "Luxe", "Écologique", "Technique"]
-        )
-        key_features = st.text_area(
-            "Caractéristiques principales",
-            placeholder="Listez les caractéristiques principales du produit, une par ligne"
-        )
-        keywords = st.text_input(
-            "Mots-clés SEO",
-            placeholder="Séparez les mots-clés par des virgules"
-        )
-    
-    submitted = st.form_submit_button("Générer la description")
+    submitted = st.form_submit_button("🚀 Générer l’article")
 
-# Affichage du résultat
-if submitted:
-    if not product_name:
-        st.error("Veuillez entrer le nom du produit.")
-    else:
-        # Vérifier la limite quotidienne
-        if not check_daily_limit(st.session_state.email):
-            st.error(f"Vous avez atteint la limite de {daily_limit} générations par jour. Revenez demain pour continuer.")
-        else:
-            with st.spinner("Génération de la description en cours..."):
-                description = generate_product_description(
-                    product_name,
-                    product_category,
-                    target_audience,
-                    brand_tone,
-                    key_features,
-                    keywords
-                )
-                
-                if description:
-                    st.success("Description générée avec succès!")
-                    # Stockage de la description dans la session state
-                    st.session_state['current_description'] = description
-                    st.session_state['current_product_name'] = product_name
-                    st.session_state['show_feedback'] = True
+# Limite d’usage
+if st.session_state.counter >= 5:
+    st.warning("🚫 Vous avez atteint la limite de 5 générations. Merci d’avoir testé la bêta !")
+    submitted = False
 
-# Affichage de la description actuelle si elle existe
-if 'current_description' in st.session_state:
-    st.markdown("### Description générée")
-    st.code(st.session_state['current_description'], language=None)
+# Génération de contenu
+if submitted and topic:
+    with st.spinner("Rédaction de votre article en cours..."):
 
-# Formulaire de retour (séparé du formulaire principal)
-if 'show_feedback' in st.session_state and st.session_state['show_feedback']:
-    st.markdown("---")
-    st.markdown("### Votre avis nous intéresse")
-    with st.form("feedback_form"):
-        satisfaction = st.radio(
-            "Ce texte vous a-t-il satisfait ?",
-            ["👍 Oui", "👎 Non"],
-            horizontal=True
-        )
-        
-        feedback_text = st.text_area(
-            "Votre commentaire (optionnel)",
-            placeholder="Dites-nous ce que vous pensez de cette description, ce qui vous a plu ou ce qui pourrait être amélioré."
-        )
-        
-        feedback_submitted = st.form_submit_button("Envoyer le retour")
-        
-        if feedback_submitted:
-            is_satisfied = satisfaction == "👍 Oui"
-            if log_feedback(
-                st.session_state['current_product_name'],
-                st.session_state['current_description'],
-                is_satisfied,
-                feedback_text
-            ):
-                st.success("Merci pour votre retour !")
-                # On ne supprime plus la description, on cache juste le formulaire de feedback
-                st.session_state['show_feedback'] = False 
+        prompt = f"""
+Tu es un rédacteur web spécialisé en SEO. Écris un article de blog de 600 à 800 mots structuré (titres H2/H3) sur le sujet suivant : "{topic}".
+- Intègre les mots-clés suivants : {keywords}
+- Adopte un ton {tone.lower()}
+- Voici des précisions sur l'entreprise : {notes}
+- Commence par une introduction engageante, puis structure le corps de l’article en plusieurs parties claires.
+- Termine par une conclusion utile.
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1200
+            )
+            content = response.choices[0].message.content
+            st.session_state.counter += 1
+
+            # Affichage
+            st.markdown("### ✨ Résultat généré")
+            st.write(content)
+            st.success("✅ Article généré avec succès !")
+
+        except Exception as e:
+            st.error(f"❌ Une erreur est survenue : {e}")
+
+# Feedback
+st.divider()
+st.subheader("💬 Laissez un feedback (optionnel)")
+
+with st.form("feedback_form"):
+    is_satisfied = st.radio("Êtes-vous satisfait du contenu ?", ["Oui", "Non"], horizontal=True)
+    feedback_text = st.text_area("Un commentaire à nous faire ?", placeholder="Dites-nous ce que vous en pensez...")
+    send = st.form_submit_button("📩 Envoyer")
+
+if send:
+    if log_feedback_to_gsheet(topic, keywords, tone, is_satisfied, feedback_text):
+        st.success("Merci pour votre retour 🙏")
